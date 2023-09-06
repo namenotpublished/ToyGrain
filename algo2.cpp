@@ -3,13 +3,7 @@
  *
  * Filename: algo2.cpp
  *
- * Author:
- * Hiren Garai
- * Dept. of Mathematics
- * BITS Pilani, Hyderabad Campus
- * Telangana, 500078
- * email: hirengarai@gmail.com
- * updated: 02/08/2023
+ * updated: 06/08/2023
  *
  * Synopsis:
  *  This file contains functions that implement the Key-IV pair finding algo of Maitra sir's paper for the
