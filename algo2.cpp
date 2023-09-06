@@ -1,5 +1,5 @@
 /*
- * REFERENCE IMPLEMENTATION OF algorithm2 of Maitra sir's paper on toy STREAM CIPHER GRAIN-v8a
+ *  REFERENCE IMPLEMENTATION OF algorithm2 of the work of Banik et al. on toy STREAM CIPHER GRAIN-v8a
  *
  * Filename: algo2.cpp
  *
@@ -14,7 +14,7 @@
  * Synopsis:
  *  This file contains functions that implement the Key-IV pair finding algo of Maitra sir's paper for the
  *  toy stream cipher Grain-V8a. It is for research purpose only.
- * 
+ *
  * running command: g++ algo2.cpp && ./a.out
  */
 
@@ -55,110 +55,109 @@ int main()
     u32 invnumber;
     bool flag;
     int shiftcount{0};
-    for (int loop{0}; loop < pow(2, 18); ++loop)
+    // for (int loop{0}; loop < pow(2, 18); ++loop)
+    // {
+    // following the logic of Banik et. al we should get a Key-IV pair among 2^2 = 4 trials
+    for (int trial{0}; trial < 4; ++trial)
     {
-        for (int trial{0}; trial < 4; ++trial)
+        // for (int kloop{0}; kloop < 256; ++kloop)
+        // {
+        //     for (int iloop{0}; iloop < 16; ++iloop)
+        //     {
+
+        flag = false;
+        number = 0;
+        invnumber = 0;
+
+        // 8-bit key
+        k = drandom();
+        // 4-bit IV
+        iv = drandom() % 16;
+
+        KLA(k, iv, Nfsr, Lfsr);
+
+        // store purpose
+        initKeyCopy = k;
+        initIVCopy = iv;
+
+        // 2 times KSA inverse
+        for (int i{0}; i < 2; ++i)
         {
-            // for (int kloop{0}; kloop < 256; ++kloop)
-            // {
-            //     for (int iloop{0}; iloop < 16; ++iloop)
-            //     {
+            INVKSA(Nfsr, Lfsr, f, g, h);
+        }
 
-            flag = false;
-            number = 0;
-            invnumber = 0;
+        for (int i{0}; i < LENGTH; ++i)
+        {
+            Invkeycopy[i] = Nfsr[i];
+            Invivcopy[i] = Lfsr[i];
+            Invnfsr[i] = Nfsr[i];
+            Invlfsr[i] = Lfsr[i];
+        }
+        KLA(k, iv, Nfsr, Lfsr);
 
+        // 16 time KSA
+        for (int clock{0}; clock < 16; ++clock)
+        {
+            KSA(Nfsr, Lfsr, f, g, h);
+            KSA(Invnfsr, Invlfsr, inf, ing, inh);
+        }
 
-            // 8-bit key
-            k = drandom();
-            // 6-bit IV
-            iv = drandom() % 16;
-
-            KLA(k, iv, Nfsr, Lfsr);
-
-            // store purpose
-            initKeyCopy = k;
-            initIVCopy = iv;
-
-            // 2 times KSA inverse
-            for (int i{0}; i < 2; ++i)
+        // 2 times PRGA
+        int temp{0};
+        for (int clock{0}; clock < 2; ++clock)
+        {
+            PRGA(Invnfsr, Invlfsr, inf, ing, inh);
+            if (inh)
             {
-                INVKSA(Nfsr, Lfsr, f, g, h);
+                clock = 2;
+                invnumber = 0;
             }
-
-            for (int i{0}; i < LENGTH; ++i)
+            else
             {
-                Invkeycopy[i] = Nfsr[i];
-                Invivcopy[i] = Lfsr[i];
-                Invnfsr[i] = Nfsr[i];
-                Invlfsr[i] = Lfsr[i];
+                temp++;
+                invnumber <<= 1;
+                invnumber |= inh;
             }
-            KLA(k, iv, Nfsr, Lfsr);
+        }
+        if (temp == 2)
+        {
+            shiftcount++;
+            flag = true;
+            trial = 4;
+        }
+        if (flag)
+        {
+            cout << "####### ####### new shift found ####### #######\n";
+            cout << "The init. key is: 0x" << hex << unsigned(initKeyCopy) << "\n";
+            cout << "The init. IV is: 0x" << hex << unsigned(initIVCopy) << "\n";
 
-            // 16 time KSA
+            cout << "*********************************\n";
+            cout << "The inv. key is: 0x";
+            HexPrintState(Invkeycopy, LENGTH);
+            cout << "The corr. IV is: 0x";
+            HexPrintState(Invivcopy, LENGTH);
+
+            cout << "The keystream:    ";
             for (int clock{0}; clock < 16; ++clock)
             {
-                KSA(Nfsr, Lfsr, f, g, h);
-                KSA(Invnfsr, Invlfsr, inf, ing, inh);
+                PRGA(Nfsr, Lfsr, f, g, h);
+                cout << unsigned(h);
             }
-
-            // 2 times PRGA
-            int temp{0};
-            for (int clock{0}; clock < 2; ++clock)
+            cout << "\n";
+            cout << "Inv. keystream: ";
+            for (int clock{2}; clock < 18; ++clock)
             {
                 PRGA(Invnfsr, Invlfsr, inf, ing, inh);
-                if (inh)
-                {
-                    clock = 2;
-                    invnumber = 0;
-                }
-                else
-                {
-                    temp++;
-                    invnumber <<= 1;
-                    invnumber |= inh;
-                }
+                invnumber <<= 1;
+                invnumber |= inh;
             }
-            if (temp == 2)
-            {
-                shiftcount++;
-                flag = true;
-                trial = 4;
-            }
-            // if (flag)
-            // {
-            //     cout << "####### ####### new shift found ####### #######\n";
-            //     cout << "The init. key is: 0x" << hex << unsigned(initKeyCopy) << "\n";
-            //     cout << "The init. IV is: 0x" << hex << unsigned(initIVCopy) << "\n";
-
-            //     cout << "*********************************\n";
-            //     cout << "The inv. key is: 0x";
-            //     HexPrintState(Invkeycopy, LENGTH);
-            //     cout << "The corr. IV is: 0x";
-            //     HexPrintState(Invivcopy, LENGTH);
-
-            //     cout << "The keystream:    ";
-            //     for (int clock{0}; clock < 16; ++clock)
-            //     {
-            //         PRGA(Nfsr, Lfsr, f, g, h);
-            //         cout << unsigned(h);
-            //     }
-            //     cout << "\n";
-            //     cout << "Inv. keystream: ";
-            //     for (int clock{2}; clock < 18; ++clock)
-            //     {
-            //         PRGA(Invnfsr, Invlfsr, inf, ing, inh);
-            //         invnumber <<= 1;
-            //         invnumber |= inh;
-            //     }
-            //     bitset<18> b1(invnumber);
-            //     cout << b1 << "\n";
-            // }
-            //     }
-            // }
+            bitset<18> b1(invnumber);
+            cout << b1 << "\n";
         }
     }
-    cout << "shift available for " << (double)(shiftcount * 100) / (pow(2, 18)) << "% of times\n";
+    // }
+    // }
+    // }
     auto end = chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
     std::cout << dec << "Execution time: " << duration.count() << " microseconds\n"; // 1 sec = 10^6 micro seconds.
